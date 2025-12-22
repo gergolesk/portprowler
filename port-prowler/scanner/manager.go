@@ -98,6 +98,22 @@ func (m *Manager) Run(ctx context.Context) (<-chan port.PortResult, error) {
 								fmt.Printf("[verbose] worker: scanning tcp %s:%d\n", job.IP, job.Port)
 							}
 							res := TCPScan(ctx, job.IP, job.Port, m.cfg.Timeout, m.cfg.Verbose)
+							// attach original target string from job
+							res.Target = job.Target
+							select {
+							case <-ctx.Done():
+								return
+							case resultsChan <- res:
+							}
+							continue
+						}
+						if st == port.ScanUDP {
+							// perform real UDP probe
+							if m.cfg.Verbose {
+								fmt.Printf("[verbose] worker: scanning udp %s:%d\n", job.IP, job.Port)
+							}
+							res := UDPScan(ctx, job.IP, job.Port, m.cfg.Timeout, m.cfg.Verbose)
+							res.Target = job.Target
 							select {
 							case <-ctx.Done():
 								return
