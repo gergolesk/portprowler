@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"portprowler/netutil"
+	"portprowler/output"
 	"portprowler/port"
 	"portprowler/scanner"
 )
@@ -84,8 +85,6 @@ func main() {
 		os.Exit(4)
 	}
 
-	// Consume results until closed (workers will emit placeholder results in this milestone)
-	for r := range resultsCh {
-		fmt.Printf("RESULT: %s %s/%d %s\n", r.IP, r.Proto, r.Port, r.State)
-	}
+	// Print results as a human-readable table to stdout
+	output.PrintTable(resultsCh, os.Stdout)
 }
