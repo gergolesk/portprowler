@@ -31,8 +31,24 @@ func TCPScan(ctx context.Context, ip string, portNum uint16, timeout time.Durati
 	if err == nil {
 		// success -> open
 		res.State = "open"
-		// close connection immediately; banner grabbing is optional and done elsewhere
-		_ = conn.Close()
+		// Try to read a small banner (non-blocking-ish using a short deadline).
+		if conn != nil {
+			// set small read deadline (min(timeout, 500ms))
+			bannerTimeout := 500 * time.Millisecond
+			if timeout > 0 && timeout < bannerTimeout {
+				bannerTimeout = timeout
+			}
+			_ = conn.SetReadDeadline(time.Now().Add(bannerTimeout))
+			buf := make([]byte, 1024)
+			n, _ := conn.Read(buf)
+			if n > 0 {
+				res.ServiceBanner = strings.TrimSpace(string(buf[:n]))
+				if verbose {
+					fmt.Printf("[verbose] tcp banner %s -> %q\n", addr, res.ServiceBanner)
+				}
+			}
+			_ = conn.Close()
+		}
 		if verbose {
 			fmt.Printf("[verbose] tcp connect success %s rtt=%dms\n", addr, res.RTTMillis)
 		}

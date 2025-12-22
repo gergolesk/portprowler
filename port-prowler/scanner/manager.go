@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"portprowler/detector"
 	"portprowler/port"
 )
 
@@ -100,6 +101,17 @@ func (m *Manager) Run(ctx context.Context) (<-chan port.PortResult, error) {
 							res := TCPScan(ctx, job.IP, job.Port, m.cfg.Timeout, m.cfg.Verbose)
 							// attach original target string from job
 							res.Target = job.Target
+
+							// If open and service detection enabled, run detector and use updated result.
+							if res.State == "open" && m.cfg.ServiceDetect {
+								dcfg := detector.Config{
+									ServiceDetect: m.cfg.ServiceDetect,
+									Timeout:       m.cfg.Timeout,
+									Verbose:       m.cfg.Verbose,
+								}
+								res = detector.DetectService(ctx, dcfg, res)
+							}
+
 							select {
 							case <-ctx.Done():
 								return
@@ -114,6 +126,17 @@ func (m *Manager) Run(ctx context.Context) (<-chan port.PortResult, error) {
 							}
 							res := UDPScan(ctx, job.IP, job.Port, m.cfg.Timeout, m.cfg.Verbose)
 							res.Target = job.Target
+
+							// For UDP open results, optionally run service detection too (best-effort).
+							if res.State == "open" && m.cfg.ServiceDetect {
+								dcfg := detector.Config{
+									ServiceDetect: m.cfg.ServiceDetect,
+									Timeout:       m.cfg.Timeout,
+									Verbose:       m.cfg.Verbose,
+								}
+								res = detector.DetectService(ctx, dcfg, res)
+							}
+
 							select {
 							case <-ctx.Done():
 								return
