@@ -3,7 +3,9 @@ package scanner
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"time"
 
 	"portprowler/port"
 )
@@ -17,7 +19,7 @@ type Config struct {
 	ScanUDP       bool
 	ScanStealth   bool
 	Workers       int
-	Timeout       any // keep generic for now (time.Duration later)
+	Timeout       time.Duration
 	ServiceDetect bool
 	OSDetect      bool
 	Verbose       bool
@@ -85,8 +87,25 @@ func (m *Manager) Run(ctx context.Context) (<-chan port.PortResult, error) {
 					}
 					// Execute scan types sequentially for this job.
 					for _, st := range job.ScanTypes {
-						// Placeholder implementation for milestone 2:
-						// emit a PortResult with proto and unknown state.
+						select {
+						case <-ctx.Done():
+							return
+						default:
+						}
+						if st == port.ScanTCP {
+							// perform real TCP connect scan
+							if m.cfg.Verbose {
+								fmt.Printf("[verbose] worker: scanning tcp %s:%d\n", job.IP, job.Port)
+							}
+							res := TCPScan(ctx, job.IP, job.Port, m.cfg.Timeout, m.cfg.Verbose)
+							select {
+							case <-ctx.Done():
+								return
+							case resultsChan <- res:
+							}
+							continue
+						}
+						// For other scan types keep previous placeholder behavior for now.
 						res := port.PortResult{
 							Target: job.Target,
 							IP:     job.IP,
