@@ -11,7 +11,8 @@ import (
 // PrintTable consumes results channel and prints a human-readable table to writer.
 func PrintTable(results <-chan port.PortResult, w io.Writer) {
 	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "TARGET\tIP\tPORT/PROTO\tSTATE\tSERVICE\tINFO")
+	// add OS and CONFIDENCE columns
+	fmt.Fprintln(tw, "TARGET\tIP\tPORT/PROTO\tSTATE\tSERVICE\tOS\tCONFIDENCE\tINFO")
 	for r := range results {
 		info := r.Error
 		if info == "" {
@@ -21,7 +22,9 @@ func PrintTable(results <-chan port.PortResult, w io.Writer) {
 		if target == "" {
 			target = r.IP
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%d/%s\t%s\t%s\t%s\n", target, r.IP, r.Port, r.Proto, r.State, r.Service, info)
+		// include OS and Confidence in the output row
+		fmt.Fprintf(tw, "%s\t%s\t%d/%s\t%s\t%s\t%s\t%s\t%s\n",
+			target, r.IP, r.Port, r.Proto, r.State, r.Service, r.OSGuess, r.Confidence, info)
 	}
 	_ = tw.Flush()
 }

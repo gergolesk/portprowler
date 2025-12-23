@@ -112,6 +112,15 @@ func (m *Manager) Run(ctx context.Context) (<-chan port.PortResult, error) {
 								res = detector.DetectService(ctx, dcfg, res)
 							}
 
+							// If open and OS detection enabled, run OS heuristics (prefer after service detection).
+							if res.State == "open" && m.cfg.OSDetect {
+								if osGuess, osConf := detector.DetectOSForResult(res); osGuess != "" {
+									res.OSGuess = osGuess
+									// Overwrite Confidence with OS confidence per spec (best-effort).
+									res.Confidence = osConf
+								}
+							}
+
 							select {
 							case <-ctx.Done():
 								return
@@ -135,6 +144,14 @@ func (m *Manager) Run(ctx context.Context) (<-chan port.PortResult, error) {
 									Verbose:       m.cfg.Verbose,
 								}
 								res = detector.DetectService(ctx, dcfg, res)
+							}
+
+							// For UDP open results, optionally run OS detection if requested.
+							if res.State == "open" && m.cfg.OSDetect {
+								if osGuess, osConf := detector.DetectOSForResult(res); osGuess != "" {
+									res.OSGuess = osGuess
+									res.Confidence = osConf
+								}
 							}
 
 							select {
