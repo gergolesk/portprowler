@@ -36,6 +36,9 @@ func NewManager(cfg Config) *Manager {
 	return &Manager{cfg: cfg}
 }
 
+// sentinel error returned when stealth requested but privileges missing
+var ErrNeedPriv = errors.New("stealth requires raw socket privileges")
+
 // Run starts the worker pool and returns a results channel. It returns an error for invalid config.
 // The returned channel will be closed once all work is completed.
 func (m *Manager) Run(ctx context.Context) (<-chan port.PortResult, error) {
@@ -147,6 +150,39 @@ func (m *Manager) Run(ctx context.Context) (<-chan port.PortResult, error) {
 							}
 
 							// For UDP open results, optionally run OS detection if requested.
+							if res.State == "open" && m.cfg.OSDetect {
+								if osGuess, osConf := detector.DetectOSForResult(res); osGuess != "" {
+									res.OSGuess = osGuess
+									res.Confidence = osConf
+								}
+							}
+
+							select {
+							case <-ctx.Done():
+								return
+							case resultsChan <- res:
+							}
+							continue
+						}
+						if st == port.ScanStealth {
+							// perform stealth (SYN) scan via scaffold
+							if m.cfg.Verbose {
+								fmt.Printf("[verbose] worker: scanning stealth %s:%d\n", job.IP, job.Port)
+							}
+							res := StealthScan(ctx, job.IP, job.Port, m.cfg.Timeout, m.cfg.Verbose)
+							res.Target = job.Target
+
+							// If open and service detection enabled, run detector and use updated result.
+							if res.State == "open" && m.cfg.ServiceDetect {
+								dcfg := detector.Config{
+									ServiceDetect: m.cfg.ServiceDetect,
+									Timeout:       m.cfg.Timeout,
+									Verbose:       m.cfg.Verbose,
+								}
+								res = detector.DetectService(ctx, dcfg, res)
+							}
+
+							// If open and OS detection enabled, run OS heuristics.
 							if res.State == "open" && m.cfg.OSDetect {
 								if osGuess, osConf := detector.DetectOSForResult(res); osGuess != "" {
 									res.OSGuess = osGuess

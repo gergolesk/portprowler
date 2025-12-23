@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -81,6 +82,11 @@ func main() {
 	ctx := context.Background()
 	resultsCh, err := mgr.Run(ctx)
 	if err != nil {
+		// Map privilege/config error for stealth -> exit code 3 per spec
+		if errors.Is(err, scanner.ErrNeedPriv) {
+			fmt.Fprintln(os.Stderr, "Stealth scan (-s) requires raw socket privileges. Rerun with elevated privileges (root/CAP_NET_RAW) or remove -s to use TCP connect. No fallback is performed.")
+			os.Exit(3)
+		}
 		fmt.Fprintf(os.Stderr, "failed to start scanner manager: %v\n", err)
 		os.Exit(4)
 	}
