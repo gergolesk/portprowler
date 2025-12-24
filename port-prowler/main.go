@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"portprowler/netutil"
@@ -91,6 +93,29 @@ func main() {
 		os.Exit(4)
 	}
 
-	// Print results as a human-readable table to stdout
-	output.PrintTable(resultsCh, os.Stdout)
+	// Render output into buffer first
+	var buf bytes.Buffer
+	output.PrintTable(resultsCh, &buf)
+
+	// Copy buffer to stdout
+	if _, err := os.Stdout.Write(buf.Bytes()); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write to stdout: %v\n", err)
+		os.Exit(4)
+	}
+
+	// ensure result directory exists
+	outDir := "result"
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create result dir: %v\n", err)
+		os.Exit(4)
+	}
+
+	if *fileOut != "" {
+		outPath := filepath.Join(outDir, *fileOut)
+
+		if err := output.WriteAtomic(outPath, buf.Bytes()); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to write output file: %v\n", err)
+			os.Exit(4)
+		}
+	}
 }
