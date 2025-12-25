@@ -56,7 +56,7 @@ func main() {
 
 	// Minimal success output for milestone 1
 	fmt.Printf("Target: %s -> %s\n", target, ipStr)
-	fmt.Printf("Ports: %v\n", ports)
+	fmt.Printf("Ports: %v\n", *portsSpec)
 	fmt.Printf("Scan modes: tcp=%v udp=%v stealth=%v\n", *tcp, *udp, *stealth)
 	fmt.Printf("Service detection: %v, OS detection: %v\n", *serviceDetect, *osDetect)
 	fmt.Printf("Workers: %d, timeout: %v, verbose: %v\n", *workers, *to, *verbose)
@@ -104,15 +104,14 @@ func main() {
 	}
 
 	// ensure result directory exists
-	outDir := "result"
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create result dir: %v\n", err)
-		os.Exit(4)
-	}
-
 	if *fileOut != "" {
-		outPath := filepath.Join(outDir, *fileOut)
+		outDir := "result"
+		if err := os.MkdirAll(outDir, 0o755); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to create result dir: %v\n", err)
+			os.Exit(4)
+		}
 
+		outPath := filepath.Join(outDir, *fileOut)
 		if err := output.WriteAtomic(outPath, buf.Bytes()); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to write output file: %v\n", err)
 			os.Exit(4)
