@@ -3,6 +3,7 @@ package output
 import (
 	"fmt"
 	"io"
+	"sort"
 	"text/tabwriter"
 
 	"portprowler/port"
@@ -11,6 +12,23 @@ import (
 // PrintTableFromSlice prints a table from an in-memory slice of results.
 // The table does NOT include an OS column (OS is printed separately per-target).
 func PrintTableFromSlice(results []port.PortResult, w io.Writer) {
+	// sort by protocol, then port number ascending
+	sort.Slice(results, func(i, j int) bool {
+		// primary: protocol
+		if results[i].Proto != results[j].Proto {
+			return results[i].Proto < results[j].Proto
+		}
+		// secondary: port number
+		if results[i].Port != results[j].Port {
+			return results[i].Port < results[j].Port
+		}
+		// tertiary tie-breakers for deterministic ordering
+		if results[i].IP != results[j].IP {
+			return results[i].IP < results[j].IP
+		}
+		return results[i].Service < results[j].Service
+	})
+
 	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
 	// Removed CONFIDENCE column
 	fmt.Fprintln(tw, "TARGET\tIP\tPORT/PROTO\tSTATE\tSERVICE\tINFO")
@@ -23,7 +41,6 @@ func PrintTableFromSlice(results []port.PortResult, w io.Writer) {
 		if target == "" {
 			target = r.IP
 		}
-		// removed confidence field from output
 		fmt.Fprintf(tw, "%s\t%s\t%d/%s\t%s\t%s\t%s\n",
 			target, r.IP, r.Port, r.Proto, r.State, r.Service, info)
 	}

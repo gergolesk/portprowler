@@ -131,18 +131,16 @@ func main() {
 	}
 
 	// If file output requested, ensure parent dir exists and write atomically
+	// ensure result directory exists
 	if *fileOut != "" {
-		outDir := filepath.Dir(*fileOut)
-		if outDir == "" || outDir == "." {
-			outDir = ""
+		outDir := "result"
+		if err := os.MkdirAll(outDir, 0o755); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to create result dir: %v\n", err)
+			os.Exit(4)
 		}
-		if outDir != "" {
-			if err := os.MkdirAll(outDir, 0o755); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to create output directory %s: %v\n", outDir, err)
-				os.Exit(4)
-			}
-		}
-		if err := output.WriteAtomic(*fileOut, buf.Bytes()); err != nil {
+
+		outPath := filepath.Join(outDir, *fileOut)
+		if err := output.WriteAtomic(outPath, buf.Bytes()); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to write output file: %v\n", err)
 			os.Exit(4)
 		}
