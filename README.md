@@ -39,16 +39,16 @@ portprowler [flags] <target>
 ```
 
 Flags:
-- -p <ports>            : required port specification (single, comma list, ranges; e.g., `22`, `22,80,8000-8100`)
-- -tcp                  : enable TCP connect scan (default if no scan flags)
-- -udp                  : enable UDP scan
-- -s                    : enable stealth (SYN) scan (requires privileges; no fallback)
-- -f <file>             : write table-style output to file (overwrite, atomic)
-- --service-detect      : opt-in service detection (only for open ports)
-- --os-detect           : opt-in OS detection (only for open ports)
-- -c <num>              : worker count (default 100)
-- -t <duration>         : per-probe timeout (default 1s), e.g., `500ms`, `2s`
-- -v                    : verbose logging
+  -p <ports>            Required port specification (e.g. 22,80,8000-8100)
+  -tcp                  Enable TCP connect scan
+  -udp                  Enable UDP scan (best-effort)
+  -s                    Enable stealth (SYN) scan (requires privileges; experimental)
+  -f <file>             Write output to file (atomic, in result/)
+  --service-detect      Enable basic service detection (limited)
+  --os-detect           Enable best-effort host OS detection
+  -c <num>              Worker count (default 100)
+  -t <duration>         Per-probe timeout (default 1s)
+  -v                    Verbose logging
 
 Example:
 
@@ -81,8 +81,8 @@ The table printed to stdout (and to file with `-f`) contains:
 Example table:
 
 ```
-TARGET         IP             PORT/PROTO  STATE     SERVICE  OS      CONFIDENCE  INFO
-example.com    93.184.216.34  80/tcp      open      http     Linux   medium      rtt=15ms
+TARGET         IP             PORT/PROTO  STATE     SERVICE  INFO
+example.com    93.184.216.34  80/tcp      open      http     rtt=15ms
 ```
 
 ## Examples
