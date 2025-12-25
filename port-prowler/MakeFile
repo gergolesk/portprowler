@@ -1,0 +1,19 @@
+# Makefile for Port Prowler
+
+.PHONY: all build test vet ci clean
+
+all: build
+
+build:
+    go build ./...
+
+test:
+    go test ./...
+
+vet:
+    go vet ./...
+
+ci: vet test
+
+clean:
+    @rm -f ./portprowler ./port-prowler
